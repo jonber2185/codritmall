@@ -6,17 +6,39 @@ import SizeReviewList from '@/components/SizeReviewList';
 import StarRating from '@/components/StarRating';
 import Image from 'next/image';
 
-export default function Product() {
-  const [product, setProduct] = useState();
+
+export async function getStaticPaths() {
+  const response = await axios.get('/products');
+  const products = response.data.results;
+  const paths = products.map((product) => (
+    { params: { id: String(product.id) }}
+  ));
+
+  return {
+    paths,
+    fallback: true,
+  }
+}
+
+export async function getStaticProps(context) {
+  const productId = context.params['id'];
+  let product;
+  try {
+    const response = await axios.get(`/products/${productId}`);
+    product = response.data;
+  } catch(e) {
+    return { notFound: true, }
+  }
+
+  return {
+    props: { product },
+  };
+}
+
+export default function Product({ product }) {
   const [sizeReviews, setSizeReviews] = useState([]);
   const router = useRouter();
   const { id } = router.query;
-
-  async function getProduct(targetId) {
-    const res = await axios.get(`/products/${targetId}`);
-    const nextProduct = res.data;
-    setProduct(nextProduct);
-  }
 
   async function getSizeReviews(targetId) {
     const res = await axios.get(`/size_reviews/?product_id=${targetId}`);
@@ -27,7 +49,6 @@ export default function Product() {
   useEffect(() => {
     if (!id) return;
 
-    getProduct(id);
     getSizeReviews(id);
   }, [id]);
 
